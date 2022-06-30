@@ -227,7 +227,7 @@ Hoisting관련 코드는 웬만하면 피하기..!!🖐
 var variable; // 이 부분만 호이스팅 된다 🧐
 console.log(variable); // undefined
 variable = 10;
-```
+``` 
 <br> const, let은 2번 선언하면 Error But var은 여러번 선언해도 문제가 없다.
 <Br> var은 코드를 분석할 떄 헷갈리게 만든다. ex) 선언 부분만 올라간다던지, 선언은 2번이나 될 수 있고.. , 
 <br>위 코드의 절차를 거치면 window.variable로 등록이 된다. variable(var)을 사용한다면..
