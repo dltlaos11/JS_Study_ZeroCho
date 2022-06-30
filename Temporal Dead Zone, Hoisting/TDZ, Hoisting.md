@@ -232,3 +232,32 @@ variable = 10;
 <Br> var은 코드를 분석할 떄 헷갈리게 만든다. ex) 선언 부분만 올라간다던지, 선언은 2번이나 될 수 있고.. , 
 <br>위 코드의 절차를 거치면 window.variable로 등록이 된다. variable(var)을 사용한다면..
 <br><mark>var 있으면 var y;와 같은 형식으로 위로 올리고 그 다음 함수들(함수 선언식들)을 나열.. 그리고 cosnt와 let은 그 상태 그대로 유지 !! 이것이 호이스팅이다.</mark>
+    
+# 블록 스코프와 매개변수📗
+
+``` javascript 
+const x = true;
+const y = false;
+function a() {
+    let a = 4;
+    y = true;
+    if (x) {
+        let a = 3;
+        for (let i = 0; i < a; i++>) {
+            console.log(i);
+        }
+        if (!y) {
+            kkk();
+        }
+    }
+    z(); // 에러 
+}
+
+a();
+const z = () => {}; // 선언은 위에서부터 아래로 순서대로 실행되는 것. a를 호출했을 때는 z가 선언되지 않은 상태이므로 에러
+
+// 🔘 다만, function z() {} 이거나 사용하지 않는 것이 좋은 var z; 였다면 호이스팅 되서 위로 올라간다. 호이스팅이 되는 것이 있나 한번 살펴보는 것이 좋다.
+// 파일 자체는 anonymous 함수, 파일 자체가 실행되면 anonymous 함수가 호출됐다고 생각하고 자기 스코프에 호이스팅 될 애들이 있나 살펴봐야 한다.
+
+// 🧐 동기 코드에서 해야되는 것은 스코프 별로 선언지도(Ex_ anony -> a(fun), x(true), y(false->true), z->(fun) || a -> a(4) || z -> a(3), b(5)) 그리고 호출별로 호출스택과 this를 만들어서(Ex_ananoy->this(window), z->this(window) || strict모드면 undefined) 연습 
+```
