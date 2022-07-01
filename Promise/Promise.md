@@ -364,6 +364,36 @@ Promise.resolve(1)
     }); // 스코프체인에 의해 a에 접근이 안된다. 그래서 계속 넘겨받는 형식으로 한다.
     // 위의 코드는 편의상 !🧐 
 ```
+``` javascript
+async function c() {
+    const a = await 1;
+    const b = await 2;
+    return a + b; // 이런 경우 Promise로 못 바꿈.
+} // async function은 재너레이터로 변환 한다고 한다. 동일한 스코프 제공..한다고 한다.
+
+Promise.resolve(1)
+    .then((a) => {
+        return 2;
+    })
+    .then((b) => {
+        return a+b; // 스코프 문제로 ❌, async function은 가능, Promise로 변환 못함.
+    })
+
+// 위 같은 경우에 async 🔜 Promise는 안되지만 IIFE(즉시 실행 함수)를 만들어서 억지로 만들어보자..!!😨꼼수
+(function() {
+    let a;
+    let b;
+    Promise.resolve(1) // resolve 호출의 부모는 즉시 실행 익명함수(IIFE)_(function() {})()
+    .then((result) => {
+        a = result;
+        return 2;
+    })
+    .then((result) => {
+        b = result;
+        return a+b; // 스코프 문제로 ❌, async function은 가능, Promise로 변환 못함.
+    })
+})();
+```
 
 ## 위 코드 해석🟢
 ### async 함수는 await 나오기 전까지 '동기', await 나오는 순가 '비동기'
@@ -422,4 +452,62 @@ console.log('3');
 // 2
 // undefined
 
+```
+
+## Promise 🔜 async로 바꿀떄 실수🟢
+- 동시(```BG```에서)에 실행 가능한 것들은 ```Promise```로 먼저 실행해라, await 연달아 쓰지 말기
+``` javascript
+function delayP(ms) {
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, ms); 
+    } /*동기부분*/);
+};
+
+// await을 줄줄이 적는 것..!!
+// await 부분을 then이라고 보면 된다.
+async function a() {
+    await delayP(3000); // 3초
+    await delayP(6000); // 6초
+    await delayP(9000); // 9초
+} // 토탈 18초
+
+async function b() {
+    const p1 = delayP(3000); // 3초
+    const p2 = delayP(6000); // 6초, p1 p2가 동시에 가능하다면
+    await Promise.allSettled([p1, p2]); // 6초
+    await delayP(9000); // 9초
+} // 토탈 15초
+// Promise.all, Promise.allSettled 결괏값을 한 번에 묶어서 나중에 사용가능
+```
+### ```Promise```의 타이밍은 3번 정도 나뉜다.
+- 실행은 바로 한다. ```new Promise(동기코드)```이므로
+- resolve가 되는 순간 결괏값이 나오기에 결괏값은 나중에 나온다.
+- 결괏값을 사용할 떄는 더 나중. ]
+### 사람들이 익숙한 상황은
+- 실행은 바로
+- 결괏값도 거의 바로 쓰고싶은데
+- 그 다음에 결괏값이 나오면
+- then, await, Promise.all 이런게 결괏값을 기다린 후에 실행된다.
+``` javascript
+axios.get().then(() =>{
+
+}).catch(() => {
+
+}).finally(() => {
+
+}); // 사실상 callback함수..!
+
+// async 함수 사용할 떄 동시에 사용 가능한 지에 대해서 생각해봐야함.
+async function createPost(){
+    const post = await db.getPost(); // 게시물 조회
+    if (post) {
+        res.status(403).send('이미 게시글에 존재합니다.');
+    } else {
+        await db.createPost(); // 게시글 작성
+
+        const p1 = db.userIncrementPostCount(); // 사용자에 작성글 카운트 1 올림
+        const p2 = db.createNoti(); // 새로운 게시글 알림 등록
+        await Promise.allSettled([p1, p2]); // 응답시간 줄일 수 있다.
+    }
+}
 ```
