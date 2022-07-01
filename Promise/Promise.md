@@ -242,3 +242,184 @@ p.then((result) => {
 ```
 부분이 올라간다. 안에서 resolve(a)를 호출하니 ```Promise```의 조건을 만족, ```CS, BG, M, m```이 모두 비어있으면 js가 끝난 것이다.
 ### 참고로 비동기 함수가 ```BG```에 들어가는 부분에서 setTimeout 말고 setInterval의 경우 ```BG```에 끝까지 남아있으므로 clearInterval을 해줘야 js가 마무리된다.
+
+## then🟢
+``` javascript
+//  연속된 then의 경우 catch를 마지막에 붙이기 보단 각 then에서 catch하는 것이 좋다. 마지막 catch는 앞 전부에서 오류가 하나라도 있으면 발생. 어떤 오류인지 찾기 힘듦. 
+p.then((result) => {
+    console.log('result', result);
+}).catch(()=>{
+
+}).then(() => {
+
+}).catch(()=>{
+
+}).then(() => {
+
+}).catch(()=>{
+
+}).then(() => {
+
+}).finally(() => {
+
+})
+
+p.then((result) => {
+    console.log('result', result);
+    return 1;
+}).then((result) => {
+    console.log(result); // 1
+    // 함수는 아무것도 안적으면 기본적으로 return undefined;
+    return undefined;
+}).then((result) => {
+    console.log(result); // undefined
+    return Promise.resolve(1); // Promise면 resolve한 값이 그 다음 return 값
+}).then((result) => {
+    console.log(result); // 1
+})
+
+
+
+```
+### setTimeout을 Promise화 시키기
+``` javascript
+function delayP(ms) {
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, ms); // Promise로 감싸서 원할 떄 결과값을 resolve 해주면 된다.
+        reject(err); // err 날만한 부분에 reject(err)하기
+    });
+};
+
+async function a() {
+    try {
+        await delayP(1000);
+    } catch(error) {
+        console.error(error);
+    } // delayP 하나에 대한 에러를 확인하고 싶을떄
+
+    try {
+        await delayP(1000);
+        await delayP(1000);
+        await delayP(1000);
+    } catch (error) {
+        console.error(error);
+    }
+}
+```
+
+## async/await, Promise로 바꾸기🟢
+
+``` javascript
+async function a() {
+    const a = await 1;
+    console.log('a', a);
+    console.log('hmm');
+    await null;
+    const b = await Promise.resolve(1);
+    console.log('b', b);
+    return b;
+}
+
+// async 함수를 Promise로 바꾸려면 await이 기준이다. await을 then이라고 생각해라
+// async 함수는 오른쪽에서 -> 왼쪽 Promise에서는 왼->오른쪽, 위에서 아래로
+
+Promise.resolve(1) // 처음 await 1이 Promise가 아니므로 1을 Promise화 시키기
+    .then((a) => { // await에서 대입하는 변수를 then()에 대입 
+        console.log('a', a);
+        console.log('hmm');
+        return null; // await null 
+    })
+    .then(() => { // await과 await사이 대입하는거 없으르로 
+        return Promise.resolve(1);
+    })
+    .then((b) => {
+        console.log('b', b);
+        return b;
+    });
+
+// 마지막에 return b가 아니라 return a+b인 경우
+
+async function a() {
+    const a = await 1;
+    console.log('a', a);
+    console.log('hmm');
+    await null;
+    const b = await Promise.resolve(1);
+    console.log('b', b);
+    return a+b;
+}
+
+Promise.resolve(1) 
+    .then((a) => { 
+        console.log('a', a);
+        console.log('hmm');
+        return [a, null]; 
+    })
+    .then((...args) => { 
+        return Promise.all(args.concat(Promise.resolve(1)));
+    })
+    .then((...args) => {
+        console.log('b', b);
+        return b;
+    }); // 스코프체인에 의해 a에 접근이 안된다. 그래서 계속 넘겨받는 형식으로 한다.
+    // 위의 코드는 편의상 !🧐 
+```
+
+## 위 코드 해석🟢
+### async 함수는 await 나오기 전까지 '동기', await 나오는 순가 '비동기'
+### await는 then으로 끊어진다.
+``` javascript
+function delayP(ms) {
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, ms); 
+        reject(err); 
+    } /*동기부분*/);
+};
+
+async function a() {
+    console.log('2'); // 동기 부분
+    const a = await 1; // async는 await 나오기 전까지 '동기', await 나오는 순가 '비동기', await때문에 await 이후부터는 비동기임. 한번 비동기는 영원한 비동기
+    // await는 then으로 끊어진다.
+    console.log('4'); // anonymous 다 끝난 다음에 비동기 부분 들어가는 첫 부분
+    console.log('a', a);
+    console.log('hmm');
+    await null;
+    const b = await Promise.resolve(1); // Promise면 resolve하고 아니면 바로넘기기 
+    console.log('b', b);
+    return b;
+}
+// await이 붙으면 다 비동기
+
+// 초반에 익숙하지 않을 떄는 async function a()를 아래처럼 생각하기.
+// Promise.resolve(1) 
+//     .then((a) => {  
+//         console.log('a', a);
+//         console.log('hmm');
+//         return null;  
+//     })
+//     .then(() => {  
+//         return Promise.resolve(1);
+//     })
+//     .then((b) => {
+//         console.log('b', b);
+//         return b;
+//     });
+
+console.log('1');
+a().then((result) => {
+    console.log(result);
+}).then((result2) => {
+    console.log(result2);
+})
+console.log('3');
+// 1
+// 2 
+// 3
+// 4
+// a 1
+// hmm
+// b 1
+// 2
+// undefined
+
+```
