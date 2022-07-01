@@ -241,4 +241,4 @@ p.then((result) => {
 }
 ```
 부분이 올라간다. 안에서 resolve(a)를 호출하니 ```Promise```의 조건을 만족, ```CS, BG, M, m```이 모두 비어있으면 js가 끝난 것이다.
-### 참고로 비동기 함수가 ```BG```에 들어가는 부분에서 setTimeout 말고 set
+### 참고로 비동기 함수가 ```BG```에 들어가는 부분에서 setTimeout 말고 setInterval의 경우 ```BG```에 끝까지 남아있으므로 clearInterval을 해줘야 js가 마무리된다.
