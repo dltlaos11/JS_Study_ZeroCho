@@ -151,7 +151,7 @@ setTimeout(() => {
 ### 비동기는 동시의 문제가 아니다. 순서의 문제다. 비동기 코드도 정해진 순서는 있다. 보이는 것과 다를 뿐
 ### 한 번 비동기는 영원한 비동기 코드이다. 비동기 코드를 동기 코드로 바꿀려고 Promise 코드를 async/await를 쓰는데 그건 사실 동기로 만드는 코드가 아니다. 비동기 코드를 동기 코드로 바꾸려고 하지 말아라. 깔끔한 비동기 코드 작성해야 한다.
 ### 해석하는 방법🤷‍♂️
-- ```BG```(백그라운드, Ex_다른언어로 이루어진 엔진_c++, Os) 비동기 코드들이 들어간다.
+- ```BG```(백그라운드, Ex_다른언어로 이루어진 엔진_js, c++, Os, 브라우저) 비동기 코드들이 들어간다.
 - ```M```(매크로 task que, FIFO) ````Timers````, ```Event Listener```
 - ```m```(마이크로 task) ```promise```, ```process.nextTick``` 나머지는 매크로
 - ```E.L```(이벤트 루프, ```M(task que)```에 쌓인 코드를 ```CS```로 올려준다. 하나씩 ! 이 때는 ```anony```까지 끝나서 ```BG```에 있는 값이 ```M```을 거친 상태)
@@ -379,6 +379,7 @@ Promise.resolve(1)
         return a+b; // 스코프 문제로 ❌, async function은 가능, Promise로 변환 못함.
     })
 
+// return a+b같은 것만 따로 스코프를 제공해야 한다.🙏🏻 나머지는 그냥 바꾸면 된다. return 값이 하나인 것들(스코프 재공 필요없는 변수들만 있는 경우)
 // 위 같은 경우에 async 🔜 Promise는 안되지만 IIFE(즉시 실행 함수)를 만들어서 억지로 만들어보자..!!😨꼼수
 (function() {
     let a;
@@ -478,6 +479,20 @@ async function b() {
     await delayP(9000); // 9초
 } // 토탈 15초
 // Promise.all, Promise.allSettled 결괏값을 한 번에 묶어서 나중에 사용가능
+
+async function b()를 Promise로 변형시키면🤔
+
+new Promise((resolve, reject) => {
+    const p1 = delayP(3000); 
+    const p2 = delayP(6000);
+    return Promise.allSettled([p1, p2]);
+})
+    .then(() => {
+        return delayP(9000);
+    })
+    .then(() =>{
+
+    })
 ```
 ### ```Promise```의 타이밍은 3번 정도 나뉜다.
 - 실행은 바로 한다. ```new Promise(동기코드)```이므로
@@ -511,3 +526,130 @@ async function createPost(){
     }
 }
 ```
+
+## 프로미스 다양한 활용🟢 
+``` javascript
+const p1 = axios.get('서버주소');
+const p2 = axios.get('서버주소');
+const p3 = axios.get('서버주소');
+const p4 = axios.get('서버주소');
+const p5 = axios.get('서버주소');
+...
+const p12 = axios.get('서버주소');
+await Promise.allSettled([p1, p2, ...p12]); // 먼저 처리
+await Promise.allSettled([p13, p14, ...p24]); // 먼저 처리
+await Promise.allSettled([p25, p26, ...p36]); // 먼저 처리
+// 브라우저가 한 번에 처리할 수 있는 양이 있다.
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+const results = await Promise.all([p1, p2, p3]);
+
+results.map(async() => {
+    await result조작();
+}, []); // async도 Promise다. 문법적으로 다르게 표현한 것일 뿐.
+// map에서 Promise하면 순서 보장 안된다. 
+// p1, p2, p3에 대해 조작 동시에(BG에서) 돌아간다고 느껴짐🔘
+// ex) 이미지들 여러개를 동시에 조작
+
+for (let result of results){
+    await result조작(); // p1, p2, p3에 대한 조작 순서대로🔘
+}
+// 이미지들 순서대로 조작
+
+let array = [];
+for (let result of results) {
+    array.push(result조작());
+}
+await Promise.all(array); // 동시🔘
+
+
+```
+### async도 Promise다. 문법적으로 다르게 표현한 것일 뿐.😗 js에 동시는 없다.
+
+## 클로저🟢
+- 클로저 문제 : 스코프, 비동기, var(쓰레기)
+- var이 쓰레기인 이유는 for문 블록 안에 i가 있는게 아니라 부모인 함수 스코프에 존재.(함수 스코프, 블록 스코프)
+- 클로저가 문제다 ❌
+- 클로저를 사용해서 해결하는 문제
+- for문(반복문)과 비동기를 사용하면 종종 발생
+
+``` javascript
+function a() {
+    for(var i =0; i<5; i++){ // i가 4일떄까지는 true인데, i가 5가되고, 5<5가 false, 
+    // i가 variable이면 a에속한다. 🔘
+        setTimeout(() => {
+            console.log(i);
+        }, i*100); // 0, 100, 200, 300, 400
+    }
+}
+a(); // 5 5 5 5 5
+// function a 스코프는 1개고, for문의 스코프는 5개
+// a스코프에서 i는 0->5가 되는 거고, for문의 스코프 5개에서 i는 각각 0,1,2,3,4
+
+
+// setTimeout()안에 "() =>{}" 선언이다.
+// 문제: var과 for과 비동기의 환상의 콜라보
+// 해결법: var 유지 -> 즉시실행함수(IIFE) 클로저 생성
+// 해결법: var => let으로
+
+// let 사용
+function a() {
+    for(let i =0; i<5; i++){ // i가 let이면 for문에 속한다. 🔘
+        setTimeout(() => {
+            console.log(i);
+        }, i*100);
+    }
+}
+a(); // 0 1 2 3 4
+
+// IIFE(즉시 실행 함수)
+const x=1; // function a와 x는 클로저 관계
+function a() {
+    for(var i =0; i<5; i++){
+        (function(j) {
+        setTimeout(() => {
+            console.log(j);
+        }, i*100);
+    })(i);
+    }
+}
+a(); // 0 1 2 3 4
+// function(j){}와 var i는 클로저 관계 형성
+// setTimeout()의 callback함수 ()=>{}가 function()의 매개변수j와 클로저 관계
+// 모든 함수는 바깥에 변수가 있으면 그 변수와 클로저 관계
+```
+### 클로저는 함수와 함수 외부의 변수와의 관계를 클로저라고 한다.
+
+## 클로저 결론🟢
+``` javascript
+function a() {
+    for(var i =0; i<5; i++){ 
+        setTimeout(() => {
+            console.log(i);
+        }, i*100); 
+    }
+}
+a();
+// () => {
+//             console.log(i);
+//         }
+// 처음 이 함수와 클로저 관계를 가지는 부분이 var i였는데 스코프 문제로 원하는 결과가 안나왔던 거고
+
+function a() {
+    for(var i =0; i<5; i++){
+        (function(j) {
+        setTimeout(() => {
+            console.log(j);
+        }, i*100);
+    })(i);
+    }
+}
+a();
+// 새로운 함수 하나를 만들어서 내부 함수와
+// () => {
+//             console.log(j);
+//         }
+// 새로운 함수의 변수 j의 새로운 클로저 관계를 만들어서 해결했다고 해서 클로저 문제이다.
+```
+### 기존의 문제있던 클로저관계를 새로운 함수를 이용해 새로운 클로저 관계로 해결했기 때문에 클로저 문제🔘
